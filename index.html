@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreamHub - Panel Multiusos Twitch</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Barra superior de conexión -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <h1>StreamHub</h1>
+      <span class="badge-live" id="statusBadge">DESCONECTADO</span>
+    </div>
+
+    <div class="connection-controls">
+      <input type="text" id="channelInput" placeholder="Tu canal de Twitch (ej. ibai)" autocomplete="off" />
+      <button id="connectBtn" class="btn btn-primary">Conectar Chat</button>
+      <button id="demoBtn" class="btn btn-secondary" title="Simula espectadores entrando al chat">Modo Demo</button>
+      <button id="obsModeBtn" class="btn btn-ghost" title="Oculta menús para capturar solo la ruleta en OBS">Vista OBS</button>
+    </div>
+  </header>
+
+  <!-- Navegación entre módulos -->
+  <nav class="tabs" id="mainNav">
+    <button class="tab-btn active" data-tab="rouletteTab">🎡 Ruleta de Chat</button>
+    <button class="tab-btn" data-tab="pollTab">📊 Encuesta Rápida</button>
+    <button class="tab-btn" data-tab="highlightTab">💬 Destacados & Contador</button>
+  </nav>
+
+  <main class="workspace">
+    <!-- COLUMNA IZQUIERDA: HERRAMIENTAS -->
+    <section class="tools-area">
+      
+      <!-- MÓDULO 1: RULETA -->
+      <div id="rouletteTab" class="tab-content active">
+        <div class="roulette-layout">
+          <!-- Canvas de la ruleta -->
+          <div class="wheel-stage" id="wheelStage">
+            <div class="wheel-pointer">▼</div>
+            <canvas id="wheelCanvas" width="460" height="460"></canvas>
+            <button id="spinBtn" class="btn-spin">GIRAR</button>
+            <div id="winnerBanner" class="winner-banner hidden">
+              <span class="winner-label">¡GANADOR!</span>
+              <h2 id="winnerName">Usuario</h2>
+              <button id="removeWinnerBtn" class="btn btn-small">Quitar de la ruleta</button>
+            </div>
+          </div>
+
+          <!-- Configuración de la ruleta -->
+          <div class="wheel-config card">
+            <h3>Configuración de Participación</h3>
+            
+            <div class="form-group">
+              <label for="keywordInput">Palabra clave o comando en el chat:</label>
+              <input type="text" id="keywordInput" value="!participar" placeholder="Ej: !participar, yo, 1" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="matchMode">Condición:</label>
+                <select id="matchMode">
+                  <option value="starts">Empieza con</option>
+                  <option value="exact">Mensaje exacto</option>
+                  <option value="contains">Contiene la palabra</option>
+                  <option value="any">Cualquier mensaje</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="spinDuration">Duración giro (seg):</label>
+                <input type="number" id="spinDuration" value="6" min="2" max="20" />
+              </div>
+            </div>
+
+            <div class="checkbox-group">
+              <label>
+                <input type="checkbox" id="allowDuplicates" />
+                Permitir múltiples entradas por usuario
+              </label>
+              <label>
+                <input type="checkbox" id="soundEnabled" checked />
+                Sonido de giro y victoria
+              </label>
+            </div>
+
+            <div class="participants-header">
+              <h4>Participantes (<span id="participantCount">0</span>)</h4>
+              <div class="participant-actions">
+                <button id="addDemoUsersBtn" class="btn btn-small">+5 Prueba</button>
+                <button id="clearWheelBtn" class="btn btn-small btn-danger">Limpiar</button>
+              </div>
+            </div>
+
+            <div class="manual-add">
+              <input type="text" id="manualNameInput" placeholder="Agregar nombre manual..." />
+              <button id="manualAddBtn" class="btn btn-secondary">+</button>
+            </div>
+
+            <ul id="participantsList" class="participants-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÓDULO 2: ENCUESTAS -->
+      <div id="pollTab" class="tab-content">
+        <div class="card">
+          <h3>Encuesta en Vivo por Chat</h3>
+          <p class="hint">Los espectadores votan escribiendo el número de opción (<strong>1</strong>, <strong>2</strong>, <strong>3</strong>...) en el chat.</p>
+          
+          <div class="form-group">
+            <input type="text" id="pollQuestion" placeholder="Pregunta de la encuesta (ej. ¿Qué jugamos ahora?)" />
+          </div>
+          
+          <div id="pollOptionsContainer" class="poll-inputs">
+            <input type="text" class="poll-opt-input" placeholder="Opción 1" value="Opción 1" />
+            <input type="text" class="poll-opt-input" placeholder="Opción 2" value="Opción 2" />
+            <input type="text" class="poll-opt-input" placeholder="Opción 3" value="" />
+          </div>
+
+          <div class="poll-controls">
+            <button id="startPollBtn" class="btn btn-primary">Iniciar / Reiniciar Votación</button>
+            <button id="stopPollBtn" class="btn btn-secondary">Cerrar Votación</button>
+          </div>
+
+          <div id="pollResults" class="poll-results"></div>
+        </div>
+      </div>
+
+      <!-- MÓDULO 3: DESTACADOS Y CONTADOR -->
+      <div id="highlightTab" class="tab-content">
+        <div class="card">
+          <h3>Mensaje Fijado en Pantalla</h3>
+          <p class="hint">Haz clic en cualquier mensaje del chat a la derecha para proyectarlo aquí.</p>
+          <div id="pinnedMessageBox" class="pinned-box">
+            <span class="pinned-user" id="pinnedUser">Ningún mensaje fijado</span>
+            <p class="pinned-text" id="pinnedText">Selecciona un mensaje del chat en vivo para destacarlo.</p>
+            <button id="clearPinBtn" class="btn btn-small">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 16px;">
+          <h3>Termómetro de Palabra / Emote</h3>
+          <div class="form-row">
+            <input type="text" id="trackWordInput" value="GG" placeholder="Palabra a contar (ej. GG, F)" />
+            <button id="resetCounterBtn" class="btn btn-secondary">Reiniciar: <span id="wordCounterValue">0</span></button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- COLUMNA DERECHA: CHAT EN VIVO -->
+    <aside class="chat-panel card" id="chatPanel">
+      <div class="chat-header">
+        <h3>Chat en Vivo</h3>
+        <button id="clearChatBtn" class="btn btn-small">Limpiar</button>
+      </div>
+      <div id="chatMessages" class="chat-messages">
+        <div class="system-msg">Conecta tu canal arriba o pulsa "Modo Demo" para empezar.</div>
+      </div>
+      <div class="chat-simulator">
+        <input type="text" id="simUser" placeholder="Usuario" value="ViewerPro" />
+        <input type="text" id="simMsg" placeholder="Mensaje de prueba..." />
+        <button id="simSendBtn" class="btn btn-primary">Enviar</button>
+      </div>
+    </aside>
+  </main>
+
+  <canvas id="confettiCanvas"></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
